@@ -29,7 +29,7 @@ Things needed to reproduce the SR-IOV issue
      - `oc new-project sriov-test`
      - `oc create sa priviledged-sa`
      - `oc adm policy add-scc-to-user privileged -z priviledged-sa`
-   - create `SriovNetworkNodePolicy`, e.g. (01-SriovNetworkNodePolicy/sriov-config-netdevice-enp5s0f1.yaml)
+   - create `SriovNetworkNodePolicy`, e.g. see [here](01-SriovNetworkNodePolicy/sriov-config-netdevice-enp5s0f1.yaml)
    - create `NetworkAttachmentDefinition`, e.g.
    - create `StatefulSet` running a pod with a VLAN set up inside the pod, e.g
    - run a simple ping test, e.g. `for I in {0..9}; do echo -n po-vlan10${I}-0 : ; oc rsh po-vlan10${I}-0 ping -c3 192.168.10${I}.31 |grep transmi;done`
