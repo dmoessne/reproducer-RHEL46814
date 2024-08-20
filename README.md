@@ -33,5 +33,5 @@ Things needed to reproduce the SR-IOV issue
    - create `NetworkAttachmentDefinition`, e.g. see [here](02-nets/vlan/)
    - create `StatefulSet` running a pod with a VLAN set up inside the pod, e.g see [here](03-sts/vlan/)
    - run a simple ping test, e.g. `for I in {0..9}; do echo -n po-vlan10${I}-0 : ; oc rsh po-vlan10${I}-0 ping -c3 192.168.10${I}.31 |grep transmi;done`
-   - to run this in a loop, check out (run_test_loop_bisec)[scripts/run_test_loop_bisec]
+   - to run this in a loop, check out [run_test_loop_bisec](scripts/run_test_loop_bisec)
 - in case you do want or need to build a custom image for testing, see https://github.com/dmoessne/rhcos-layering
