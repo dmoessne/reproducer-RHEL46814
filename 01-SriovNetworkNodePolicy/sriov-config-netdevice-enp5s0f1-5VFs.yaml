@@ -1,0 +1,18 @@
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: sriov-config-netdevice-enp5s0f1
+  namespace: openshift-sriov-network-operator
+spec:
+  deviceType: netdevice
+  isRdma: false
+  mtu: 9000
+  needVhostNet: true
+  nicSelector:
+    pfNames:
+    - enp5s0f1#0-4
+  nodeSelector:
+    feature.node.kubernetes.io/network-sriov.capable: "true"
+  numVfs: 5
+  priority: 5
+  resourceName: sriov_netdevice_1

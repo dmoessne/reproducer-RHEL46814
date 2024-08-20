@@ -1,0 +1,32 @@
+#!/bin/bash
+i=0
+while true; do 
+   for I in {0..9}; do 
+      echo -n po-vlan10${I}-0 :;oc rsh po-vlan10${I}-0 ping -qc3 192.168.10${I}.31
+         if [ $? -ne 0 ]; then 
+           echo "pod: po-vlan10${I}-0 failed to ping after $i iterations"
+	   exit 1
+         fi 
+         echo " ---------- "
+   done
+   echo "all pod were successfully pinged, starting over"
+   echo ${i} >/var/tmp/SNO-run-${i}
+
+   timeout --preserve-status 60 oc -n sriov-test delete po --all
+   sleep 60
+   oc -n sriov-test get po --no-headers |grep -v Running
+   ret=$?
+   while [ $ret -ne 1 ];do
+      echo "pods still not running"
+      sleep 5
+      oc -n sriov-test get po --no-headers |grep -v Running
+      ret=$?
+   done
+   echo "all pods restarted, starting over"
+   if [ $i -eq 499 ]; then
+      echo "done all 500 iterations"
+      exit
+   fi
+   clear
+   let i++
+done
