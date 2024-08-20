@@ -2,7 +2,7 @@
 Things needed to reproduce the SR-IOV issue
 - Bare metal system with Intel E810:
   - OCP 4.16.0+
-  - At least one VLAN the test pod(s) can be attachted to 
+  - At least one VLAN to which test pod(s) can be attachted to 
   - RH SR-IOV Operator installed 
 - Configuration as follows:
   - SR-IOV Operator Config 
