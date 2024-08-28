@@ -3,6 +3,7 @@ Things needed to reproduce the [SR-IOV](https://youtu.be/hRHsk8Nycdg?si=4u84UcpA
 - Bare metal system with [Intel E810](https://www.intel.com/content/www/us/en/products/details/ethernet/800-network-adapters/e810-network-adapters/products.html):
   - [OCP 4.16.0+](https://docs.openshift.com/container-platform/4.16/installing/installing_on_prem_assisted/installing-on-prem-assisted.html)
   - At least one [**tagged** VLAN](https://en.wikipedia.org/wiki/IEEE_802.1Q) to which test pod(s) can be attachted to 
+    - a destination on the tagged VLAN that can be pinged (e.g. a gateway or another server that has an IP on the same tagged VLAN)
   - [RH SR-IOV Operator](https://docs.openshift.com/container-platform/4.16/networking/hardware_networks/installing-sriov-operator.html) installed 
 - Configuration as follows:
   - [SR-IOV Operator Config](https://docs.openshift.com/container-platform/4.16/networking/hardware_networks/configuring-sriov-operator.html#configure-sr-iov-operator-single-node_configuring-sriov-operator) 
