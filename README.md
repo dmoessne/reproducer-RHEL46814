@@ -1,11 +1,11 @@
 # reproducer-RHEL46814
-Things needed to reproduce the SR-IOV issue
-- Bare metal system with Intel E810:
-  - OCP 4.16.0+
-  - At least one VLAN to which test pod(s) can be attachted to 
-  - RH SR-IOV Operator installed 
+Things needed to reproduce the [SR-IOV](https://youtu.be/hRHsk8Nycdg?si=4u84UcpA2alBmdU0) issue
+- Bare metal system with [Intel E810](https://www.intel.com/content/www/us/en/products/details/ethernet/800-network-adapters/e810-network-adapters/products.html):
+  - [OCP 4.16.0+](https://docs.openshift.com/container-platform/4.16/installing/installing_on_prem_assisted/installing-on-prem-assisted.html)
+  - At least one [**tagged** VLAN](https://en.wikipedia.org/wiki/IEEE_802.1Q) to which test pod(s) can be attachted to 
+  - [RH SR-IOV Operator](https://docs.openshift.com/container-platform/4.16/networking/hardware_networks/installing-sriov-operator.html) installed 
 - Configuration as follows:
-  - SR-IOV Operator Config 
+  - [SR-IOV Operator Config](https://docs.openshift.com/container-platform/4.16/networking/hardware_networks/configuring-sriov-operator.html#configure-sr-iov-operator-single-node_configuring-sriov-operator) 
    ```
     oc get -o yaml sriovoperatorconfig -n openshift-sriov-network-operator
     apiVersion: v1
@@ -24,12 +24,12 @@ Things needed to reproduce the SR-IOV issue
     metadata:
       resourceVersion: ""
    ```
- - **MIND** all the following settings like interface name, VLAN IDs, IPs depend on your setup and will most likely need to be changed
-   - create test namespace, sa and add scc to user, e.g.:
+ - **MIND** all the following settings like interface name, VLAN IDs, IPs, ... depend on your setup and will most likely need to be changed
+   - create test namespace, [service account (sa)](https://docs.openshift.com/container-platform/4.16/authentication/understanding-and-creating-service-accounts.html) and add [security context constraint (SCC)](https://docs.openshift.com/container-platform/4.16/authentication/managing-security-context-constraints.html) to the created sa, e.g.:
      - `oc new-project sriov-test`
      - `oc create sa priviledged-sa`
      - `oc adm policy add-scc-to-user privileged -z priviledged-sa`
-   - create `SriovNetworkNodePolicy`, e.g. see [here](01-SriovNetworkNodePolicy/sriov-config-netdevice-enp5s0f1.yaml)
+   - create [`SriovNetworkNodePolicy`](https://docs.openshift.com/container-platform/4.16/networking/hardware_networks/configuring-sriov-device.html), e.g. see [here](01-SriovNetworkNodePolicy/sriov-config-netdevice-enp5s0f1.yaml)
    - create `NetworkAttachmentDefinition`, e.g. see [here](02-nets/vlan/)
    - create `StatefulSet` running a pod with a VLAN set up inside the pod, e.g see [here](03-sts/vlan/)
    - run a simple ping test, e.g. `for I in {0..9}; do echo -n po-vlan10${I}-0 : ; oc rsh po-vlan10${I}-0 ping -c3 192.168.10${I}.31 |grep transmi;done`
