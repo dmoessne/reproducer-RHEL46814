@@ -1,0 +1,45 @@
+# oc new-project sriov-test
+# oc create sa priviledged-sa
+# oc adm policy add-scc-to-user privileged -z priviledged-sa
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: po-vlan106
+  namespace: sriov-test
+  labels:
+    k8s-app: po-vlan106
+spec:
+  replicas: 1
+  selector:
+        matchLabels:
+          app: po-vlan106
+  template:
+    metadata:
+      annotations:
+        k8s.v1.cni.cncf.io/networks: vlan100@vlan100
+      name: po-vlan106
+      labels:
+            app: po-vlan106
+    spec:
+      securityContext:
+          type: privileged
+      serviceAccount: priviledged-sa
+      containers:
+      - name: po-vlan106
+        image: quay.io/dmoessne/94-ncat-tools:0.2
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            ip link add link vlan100 name mcplane type vlan egress-qos-map 1:1 2:2 3:3 4:4 5:5 6:6 7:7 id 100
+            ip link set mcplane mtu 1500
+            ip link set mcplane up
+            ip addr add 192.168.100.16/24 dev mcplane
+            /start_nc.sh
+        resources:
+          limits:
+            openshift.io/sriov_netdevice_1: 1
+          requests:
+            openshift.io/sriov_netdevice_1: 1
+        securityContext:
+           runAsUser: 0
+           privileged: true
