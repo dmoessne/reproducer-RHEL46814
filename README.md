@@ -30,8 +30,9 @@ Things needed to reproduce the [SR-IOV](https://youtu.be/hRHsk8Nycdg?si=4u84UcpA
      - `oc create sa priviledged-sa`
      - `oc adm policy add-scc-to-user privileged -z priviledged-sa`
    - create [`SriovNetworkNodePolicy`](https://docs.openshift.com/container-platform/4.16/networking/hardware_networks/configuring-sriov-device.html), e.g. see [here](01-SriovNetworkNodePolicy/sriov-config-netdevice-enp5s0f1.yaml)
-   - create `NetworkAttachmentDefinition`, e.g. see [here](02-nets/vlan/)
-   - create `StatefulSet` running a pod with a VLAN set up inside the pod, e.g see [here](03-sts/vlan/)
+   - create [`NetworkAttachmentDefinition`](https://docs.openshift.com/container-platform/4.16/networking/multiple_networks/configuring-additional-network.html#configuring-additional-network_configuration-additional-network-yaml), e.g. see [here](02-nets/vlan/)
+     - **MIND** directly configuring `NetworkAttachmentDefinition` for SR-IOV is not the recommended way and instead [`SriovNetwork`](https://docs.openshift.com/container-platform/4.16/networking/hardware_networks/configuring-sriov-net-attach.html) should be used which in turn create `NetworkAttachmentDefinition` in the defined namespace. **However** for this replicator `NetworkAttachmentDefinition` are created directly omitting `SriovNetwork`.
+   - create [`StatefulSet`](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/) running a pod with a tagged VLAN set up inside the pod, e.g see [here](03-sts/vlan/)
    - run a simple ping test, e.g. `for I in {0..9}; do echo -n po-vlan10${I}-0 : ; oc rsh po-vlan10${I}-0 ping -c3 192.168.10${I}.31 |grep transmi;done`
    - to run this in a loop, check out [run_test_loop_bisec](scripts/run_test_loop_bisec)
 - in case you do want or need to build a custom image for testing, see https://github.com/dmoessne/rhcos-layering
