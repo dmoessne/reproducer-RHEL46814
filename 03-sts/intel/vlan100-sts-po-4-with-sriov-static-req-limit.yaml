@@ -4,28 +4,28 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: po-vlan104
+  name: po-4-vlan100
   namespace: sriov-test
   labels:
-    k8s-app: po-vlan104
+    k8s-app: po-4-vlan100
 spec:
   replicas: 1
   selector:
         matchLabels:
-          app: po-vlan104
+          app: po-4-vlan100
   template:
     metadata:
       annotations:
         k8s.v1.cni.cncf.io/networks: vlan100@vlan100
-      name: po-vlan104
+      name: po-4-vlan100
       labels:
-            app: po-vlan104
+            app: po-4-vlan100
     spec:
       securityContext:
           type: privileged
       serviceAccount: priviledged-sa
       containers:
-      - name: po-vlan104
+      - name: po-4-vlan100
         image: quay.io/dmoessne/94-ncat-tools:0.2
         command: ["/bin/sh", "-c"]
         args:
