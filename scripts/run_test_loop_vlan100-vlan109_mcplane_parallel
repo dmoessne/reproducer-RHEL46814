@@ -1,0 +1,72 @@
+#!/bin/bash
+
+interface_test () {
+   for I in {0..9}; do
+      echo po-vlan10${I}-0 ; done | parallel oc rsh {} ip addr show mcplane > /dev/null 2>& 1
+   
+   if [ $? -ne 0 ]; then
+    echo "a pod has no vlan interface .. checking"
+      for I in {0..9}; do 
+        oc exec -q po-vlan10${I}-0  -- ip addr show mcplane > /dev/null 2>& 1
+           if [ $? -ne 0 ]; then
+	      echo "pod: po-vlan10${I}-0  has no vlan interface"
+	      oc rsh po-vlan10${I}-0 ip addr show 
+              exit 1
+	   fi
+       done
+   fi
+}
+
+
+ping_test () {
+   for I in {0..9}; do
+      echo ${I};done | parallel oc exec po-vlan10{}-0 -- ping -qc3 192.168.10{}.31 > /dev/null 2>& 1
+
+   if [ $? -ne 0 ]; then
+    echo "a pod failed to ping .. checking"
+      for I in {0..9}; do
+      oc rsh po-vlan10${I}-0 ping -qc3 192.168.10${I}.31 > /dev/null 2>& 1
+        if [ $? -ne 0 ]; then
+           echo "pod: po-vlan10${I}-0  failed to ping"
+           oc rsh po-vlan10${I}-0 ip addr show 
+           exit 1
+        fi
+    done
+   fi
+}
+
+
+restart_pods () {
+   echo "all pod were successfully tested, deleting them"
+   echo ${i} >/var/tmp/SNO-run-${i}
+
+   timeout --preserve-status 60 oc -n sriov-test delete po --all
+   #sleep 60
+   oc -n sriov-test get po --no-headers |grep -v Running
+   ret=$?
+   while [ $ret -ne 1 ];do
+      echo "pods still not running"
+      sleep 5
+      oc -n sriov-test get po --no-headers |grep -v Running
+      ret=$?
+   done
+}
+
+## main 
+i=0
+while true; do
+   clear
+   echo "this is test round $i"
+   echo "**********************"
+   ### test if all pods have a vlant interface
+   interface_test
+   ### test if all pods can ping
+   ping_test
+   ### delete all pods and restart
+   restart_pods
+   if [ $i -eq 499 ]; then
+      echo "done all 500 iterations"
+      exit
+   fi
+   let i++
+done
