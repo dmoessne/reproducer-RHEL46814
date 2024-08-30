@@ -40,7 +40,7 @@ restart_pods () {
    echo "all pod were successfully tested, deleting them"
    echo ${i} >/var/tmp/SNO-run-${i}
 
-   timeout --preserve-status 60 oc -n sriov-test delete po --all
+   timeout --preserve-status 60 oc -n sriov-test delete po --all --grace-period=0
    #sleep 60
    oc -n sriov-test get po --no-headers |grep -v Running
    ret=$?
