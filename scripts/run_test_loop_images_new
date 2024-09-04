@@ -1,0 +1,172 @@
+#!/bin/bash
+## set vars to image registry
+IMAGE_PATH="quay.io/dmoessne/rhel_46814.vsi_lists"
+IMAGE_TAG_PATH="https://quay.io/api/v1/repository/dmoessne/rhel_46814.vsi_lists/tag/"
+
+#functions
+get_tags (){
+  MY_TAGS=()
+  while IFS= read -r line; do
+	  MY_TAGS+=( "$line" )
+  done < <( curl -sX GET "$IMAGE_TAG_PATH" | jq -r .tags[].name | grep 4.16.5|sort -V | uniq )
+}
+
+echo_tags (){
+  for TAG in "${MY_TAGS[@]}"; do echo $TAG; done
+}
+
+apply_next_image (){
+        IMAGE_TAG=$1
+        IMAGE=${IMAGE_PATH}:${IMAGE_TAG}
+	oc get machineconfig |grep ^os-layer-custom
+	if [ $? -ne 0 ]
+            then
+		sed  "s#quay.*#$IMAGE#g" ../ms/machineconfig.yaml
+                oc apply -f ../ms/machineconfig.yaml
+                wait_reboot_done
+                started_pods
+	    else
+		oc get mc os-layer-custom-master-rhel46814 -o yaml|grep $IMAGE
+		if [ $? != 0 ];then
+		oc patch mc os-layer-custom-master-rhel46814 -p "[{\"op\": \"replace\",\"path\":\"/spec/osImageURL\",\"value\":\"$IMAGE\"}]" --type=json
+		wait_reboot_done
+		started_pods
+	        else
+		  echo "image already present, will continue with tests"	  
+		fi
+	fi
+}
+
+wait_reboot_done() {
+    echo "waiting until system rebooting"
+    oc -n openshift-machine-config-operator logs -f $(oc get po -n openshift-machine-config-operator |awk '/config-daemon/ {print $1}') -c machine-config-daemon|grep -m 1 "Shutting down MachineConfigDaemon" > /dev/null 2>& 1
+    echo "system rebooting will wait 10 minutes before checking api availibility"
+    echo
+    sleep 600
+    echo "checking if api is available again"
+    until curl --connect-timeout 10 -k https://10.32.96.170:6443/livez > /dev/null 2>& 1
+      do
+      echo "api still not available"
+      sleep 30
+    done
+    echo
+    echo waiting for mcp update complete
+    oc wait --for=condition=updated mcp/master --timeout=900s
+    echo "mcp update should be complete"
+    oc get mcp master
+}
+
+
+interface_test () {
+   for I in {0..9}; do
+      echo po-vlan10${I}-0 ; done | parallel oc rsh {} ip addr show mcplane > /dev/null 2>& 1
+   
+   if [ $? -ne 0 ]; then
+    echo "a pod has no vlan interface .. checking" 
+      for I in {0..9}; do 
+        oc exec -q po-vlan10${I}-0  -- ip addr show mcplane > /dev/null 2>& 1
+           if [ $? -ne 0 ]; then
+	      echo "pod: po-vlan10${I}-0  has no vlan interface" >> failed-SNO-$i-$IMAGE_TAG-no-interface.out
+	      oc rsh po-vlan10${I}-0 ip addr show >> failed-SNO-$i-$IMAGE_TAG-no-interface.out
+	      oc logs po-vlan10${I}-0 >> failed-SNO-$i-$IMAGE_TAG-no-inerface-logs.out
+	      ssh core@10.32.96.170 sudo dmesg -l7 >> failed-SNO-$i-$IMAGE_TAG-no-interface-dmesg-l7.out
+	      ssh core@10.32.96.170 sudo dmesg -T  >> failed-SNO-$i-$IMAGE_TAG-no-interface-dmesg-T.out
+	      interface_test_failed=1
+              break
+	   else
+	      interface_test_failed=0
+	   fi
+       done
+   fi
+}
+
+
+ping_test () {
+   for I in {0..9}; do
+      echo ${I};done | parallel oc exec po-vlan10{}-0 -- ping -qc3 192.168.10{}.31 > /dev/null 2>& 1
+
+   if [ $? -ne 0 ]; then
+    echo "a pod failed to ping .. checking"
+      for I in {0..9}; do
+      oc rsh po-vlan10${I}-0 ping -qc3 192.168.10${I}.31 > /dev/null 2>& 1
+        if [ $? -ne 0 ]; then
+           echo "pod: po-vlan10${I}-0  failed to ping" >> failed-SNO-$i-$IMAGE_TAG-no-ping.out
+           oc rsh po-vlan10${I}-0 ip addr show >> failed-SNO-$i-$IMAGE_TAG-no-ping.out
+           oc logs po-vlan10${I}-0 >> failed-SNO-$i-$IMAGE_TAG-no-ping-logs.out
+	   ssh core@10.32.96.170 sudo dmesg -l7 >> failed-SNO-$i-$IMAGE_TAG-no-ping-dmesg-l7.out
+	   ssh core@10.32.96.170 sudo dmesg -T  >> failed-SNO-$i-$IMAGE_TAG-no-ping-dmesg-T.out
+	   ping_test_failed=1
+           break
+	else 
+           ping_test_failed=0
+        fi
+      done
+   fi
+}
+
+started_pods (){
+   echo "checking for sriov resouces"
+   while [[ `oc -n openshift-sriov-network-operator get sriovnetworknodestates.sriovnetwork.openshift.io -oyaml | grep syncStatus | grep Succeeded | wc -l` != 1  ]]; do
+     sleep 1
+   done
+   echo "checkinrg if all pods are up"
+   #sleep 60
+   oc -n sriov-test get po --no-headers |grep -v Running
+   ret=$?
+   while [ $ret -ne 1 ];do
+      echo "pods still not running"
+      sleep 5
+      oc -n sriov-test get po --no-headers |grep -v Running
+      ret=$?
+   done
+
+}
+restart_pods () {
+   echo "all pod were successfully tested, deleting them"
+   echo ${i} >/var/tmp/SNO-run-${i}-$IMAGE_TAG
+
+   #timeout --preserve-status 60 oc -n sriov-test delete po --all --grace-period=0
+   timeout --preserve-status 60 oc -n sriov-test delete po --all
+   sleep 10
+   oc -n sriov-test get po --no-headers |grep -v Running
+   ret=$?
+   while [ $ret -ne 1 ];do
+      echo "pods still not running"
+      sleep 5
+      oc -n sriov-test get po --no-headers |grep -v Running
+      ret=$?
+   done
+}
+
+## main 
+get_tags
+for TAG in "${MY_TAGS[@]}"; do
+  apply_next_image $TAG
+  interface_test_failed=0
+  ping_test_failed=0
+  i=0
+  while true; do
+     clear
+     echo "this is test round $i with $IMAGE_TAG"
+     echo "*************************************"
+     ### test if all pods have a vlan interface
+     interface_test
+      if [[ $interface_test_failed -eq 1 ]] ; then
+	echo "Interface not available in iterration $i tag $TAG" | tee -a /var/tmp/failed-SNO-$i-$IMAGE_TAG-no-interface-break.out
+	break
+     fi 
+     ### test if all pods can ping
+     ping_test
+      if [[ $ping_test_failed -eq 1 ]] ; then
+	echo "ping test failed in iterration $i tag $TAG" | tee -a /var/tmp/failed-SNO-$i-$IMAGE_TAG-ping-failed-break.out
+	break
+     fi 
+     ### delete all pods and restart
+     restart_pods
+     if [ $i -eq 499 ]; then
+        echo "done all 500 iterations"
+        break
+     fi
+     let i++
+  done
+done
