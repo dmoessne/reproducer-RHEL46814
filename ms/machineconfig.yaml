@@ -1,0 +1,8 @@
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: master
+  name: os-layer-custom-master-rhel46814
+spec:
+  osImageURL: quay.io/dmoessne/rhel-46814-bisect:4.16.5-10
