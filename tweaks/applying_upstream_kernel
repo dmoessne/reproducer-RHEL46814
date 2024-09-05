@@ -1,0 +1,37 @@
+# Get image for your OCP version 
+oc adm release info quay.io/openshift-release-dev/ocp-release:4.16.5-x86_64 --image-for=rhel-coreos
+quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:a8e09b8d4705be09a6355af5b181181be0181b43c5fcc4c0fc8a0ae42bd0a5a8
+$ 
+## run the image
+$ podman run --authfile /home/dm/.config/containers/auth.json --network host -it quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:a8e09b8d4705be09a6355af5b181181be0181b43c5fcc4c0fc8a0ae42bd0a5a8
+bash-5.1#
+bash-5.1#
+bash-5.1# rpm -qa |grep kernel |xargs rpm -e 
+bash-5.1#
+bash-5.1# rm -rf /lib/modules/5.*                          
+bash-5.1#
+bash-5.1# rpm-ostree override replace http://localhost/patch/kernel-6.11.0_rc5_00206_g0781b0ea7c1c-2.x86_64.rpm http://localhost/patch/kernel-devel-6.11.0_rc5_00206_g0781b0ea7c1c-2.x86_64.rpm http://localhost/patch/kernel-headers-6.11.0_rc5_00206_g0781b0ea7c1c-2.x86_64.rpm
+##
+## ignore dracut error
+##
+## run dracut yourself, see line in previous output
+bash-5.1# mkdir /tmp/.buildinit
+bash-5.1# 
+bash-5.1# /usr/bin/dracut --no-hostonly --kver 6.11.0-rc5-00206-g0781b0ea7c1c --reproducible -v --add ostree -f /tmp/.buildinit
+bash-5.1# 
+bash-5.1# cp /tmp/.buildinit/initramfs.img /lib/modules/6.11.0-rc5-00206-g0781b0ea7c1c/
+bash-5.1# 
+bash-5.1# rm -rf /tmp/.buildinit
+bash-5.1# 
+bash-5.1# ostree container commit
+bash-5.1# 
+bash-5.1# exit
+exit
+[dm@inf3 ~]$ 
+[dm@inf3 ~]$ podman commit $(podman ps -a |awk '/seconds/ {print $1}')
+[dm@inf3 ~]$ 
+[dm@inf3 ~]$ podman tag 79bcf1906dd9d1603a160897052d7b2019b42e9948f8eccb505dc84a9ccbf0f4 quay.io/dmoessne/rhel_46814.vsi_lists:upstream-v0.2
+[dm@inf3 ~]$ 
+[dm@inf3 ~]$ podman push quay.io/dmoessne/rhel_46814.vsi_lists:upstream-v0.4
+
+## once pushed apply/alter machineconfig to use quay.io/dmoessne/rhel_46814.vsi_lists:upstream-v0.2
