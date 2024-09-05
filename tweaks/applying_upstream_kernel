@@ -34,4 +34,4 @@ exit
 [dm@inf3 ~]$ 
 [dm@inf3 ~]$ podman push quay.io/dmoessne/rhel_46814.vsi_lists:upstream-v0.4
 
-## once pushed apply/alter machineconfig to use quay.io/dmoessne/rhel_46814.vsi_lists:upstream-v0.2
+## once pushed apply/alter machineconfig to use quay.io/dmoessne/rhel_46814.vsi_lists:upstream-v0.4
