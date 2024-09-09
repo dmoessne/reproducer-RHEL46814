@@ -1,0 +1,9 @@
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  annotations:
+    k8s.v1.cni.cncf.io/resourceName: openshift.io/sriov_netdevice_1
+  name: vlan108
+  namespace: sriov-test
+spec:
+  config: '{ "type": "sriov", "cniVersion": "0.3.0", "trust": "on" }'
